@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Flipper Simulator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Style for the active tab */
+        .tab-button.active {
+            border-bottom-color: #3b82f6; /* blue-500 */
+            color: #3b82f6;
+            background-color: #f9fafb; /* gray-50 */
+        }
+        /* Hide tab content by default */
+        .tab-content {
+            display: none;
+        }
+        /* Show active tab content */
+        .tab-content.active {
+            display: block;
+        }
+        /* Custom scrollbar for containers */
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 8px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; /* cool-gray-300 */
+            border-radius: 4px;
+        }
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background-color: #f1f5f9; /* cool-gray-100 */
+        }
+        /* Driving animation overlay */
+        #driving-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 50;
+            display: none; /* Hidden by default */
+            color: white;
+            font-size: 2rem;
+            text-align: center;
+            padding-top: 40vh;
+            animation: drive-text 1.5s infinite;
+        }
+        @keyframes drive-text {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Game Container -->
+    <div class="max-w-4xl mx-auto p-4 md:p-6">
+        
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-md p-4 mb-6 relative">
+            <!-- Save/Load Buttons -->
+            <div class="absolute top-4 left-4 flex gap-2">
+                <button id="save-button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow transition-transform duration-150 active:scale-95">
+                    Save
+                </button>
+                <label class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow transition-transform duration-150 active:scale-95 cursor-pointer">
+                    Load
+                    <input type="file" id="load-input" class="hidden" accept=".json">
+                </label>
+            </div>
+
+            <!-- Title and Cash -->
+            <h1 class="text-3xl font-bold text-center text-blue-600">PC Flipper Simulator</h1>
+            <div id="cash-display" class="text-center text-2xl font-semibold text-green-600 mt-2">$1000</div>
+            <p class="text-center text-sm text-gray-500">Your Cash</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="bg-white rounded-lg shadow-md">
+            
+            <!-- Tabs -->
+            <nav class="flex border-b border-gray-200">
+                <button class="tab-button flex-1 py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:bg-gray-50" data-tab="marketplace">
+                    🛒 Marketplace
+                </button>
+                <button class="tab-button flex-1 py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:bg-gray-50" data-tab="car">
+                    🚗 Car
+                </button>
+                <button class="tab-button flex-1 py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:bg-gray-50" data-tab="workshop">
+                    🛠️ Workshop
+                </button>
+                <button class="tab-button flex-1 py-3 px-4 font-semibold text-gray-600 border-b-4 border-transparent hover:bg-gray-50" data-tab="parts-market">
+                    ⚙️ Parts Market
+                </button>
+            </nav>
+
+            <!-- Tab Content Area -->
+            <!-- Marketplace Tab -->
+            <div id="marketplace-content" class="tab-content p-4 md:p-6 space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold">For Sale</h2>
+                    <button id="refresh-listings" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition-transform duration-150 active:scale-95">
+                        Refresh ($10)
+                    </button>
+                </div>
+                <div id="listings-container" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                    <!-- Listings will be injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Car Tab -->
+            <div id="car-content" class="tab-content p-4 md:p-6">
+                <h2 class="text-xl font-semibold mb-4">Your Car</h2>
+                <div id="car-container" class="text-center p-6 bg-gray-50 rounded-lg">
+                    <!-- Car content will be injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Workshop Tab -->
+            <div id="workshop-content" class="tab-content p-4 md:p-6">
+                <h2 class="text-xl font-semibold mb-4">My Inventory</h2>
+                <div id="inventory-container" class="space-y-4">
+                    <!-- Inventory items will be injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Parts Market Tab -->
+            <div id="parts-market-content" class="tab-content p-4 md:p-6 space-y-6">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Parts For Sale</h2>
+                        <button id="refresh-parts" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition-transform duration-150 active:scale-95">
+                            Refresh (Free)
+                        </button>
+                    </div>
+                    <div id="parts-listings-container" class="space-y-4 max-h-60 overflow-y-auto pr-2">
+                        <!-- Parts listings will be injected here by JS -->
+                    </div>
+                </div>
+
+                <hr class="border-gray-300">
+
+                <div>
+                    <h2 class="text-xl font-semibold mb-4">My Parts</h2>
+                    <div id="parts-inventory-container" class="space-y-4 max-h-60 overflow-y-auto pr-2">
+                        <!-- Parts inventory will be injected here by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Message Toast -->
+    <div id="message-toast" class="fixed bottom-4 right-4 bg-gray-900 text-white p-4 rounded-lg shadow-xl opacity-0 transition-opacity duration-300">
+        <span id="message-text">Message</span>
+    </div>
+
+    <!-- Driving Overlay -->
+    <div id="driving-overlay">
+        Driving to pickup...
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        let gameState = {
+            cash: 1000,
+            inventory: [], // { id, name, description, price, value, condition }
+            marketplaceListings: [], // { id, name, description, price, value, condition }
+            activePickup: null, // The PC we are going to pick up
+            partsInventory: [], // { id, name, value, condition, fixCost, fixSuccess }
+            partsMarketListings: [], // { id, name, value, price, condition, fixCost, fixSuccess }
+            nextId: 0
+        };
+
+        // --- UI ELEMENTS ---
+        const cashDisplay = document.getElementById('cash-display');
+        const listingsContainer = document.getElementById('listings-container');
+        const refreshListingsButton = document.getElementById('refresh-listings');
+        const carContainer = document.getElementById('car-container');
+        const inventoryContainer = document.getElementById('inventory-container');
+        const partsListingsContainer = document.getElementById('parts-listings-container');
+        const partsInventoryContainer = document.getElementById('parts-inventory-container');
+        const refreshPartsButton = document.getElementById('refresh-parts');
+        const messageToast = document.getElementById('message-toast');
+        const messageText = document.getElementById('message-text');
+        const drivingOverlay = document.getElementById('driving-overlay');
+        const saveButton = document.getElementById('save-button');
+        const loadInput = document.getElementById('load-input');
+
+        // --- GAME DATA ---
+        const PC_NAMES = ["Old Office PC", "Dusty Tower", "Gaming RIG", "Slow Laptop", "Forgotten All-in-One", "Budget Build"];
+        const PC_DESCRIPTIONS = [
+            "Seller says 'it just works'.",
+            "Covered in dust. Smells weird.",
+            "Broken 'GTX 4090' (it's a 710).",
+            "Won't turn on. Easy fix?",
+            "Found in a storage unit.",
+            "'Custom built' with zip ties."
+        ];
+        const PC_CONDITIONS = {
+            broken: { valueMultiplier: 0.3, fixCost: 100, fixSuccess: 0.8 },
+            slow: { valueMultiplier: 0.6, fixCost: 50, fixSuccess: 0.95 },
+            ok: { valueMultiplier: 0.8, fixCost: 20, fixSuccess: 1.0 }
+        };
+        const PART_TYPES = [
+            { name: "CPU", condition: "broken", value: 5, fixCost: 10, fixSuccess: 0.7 },
+            { name: "CPU", condition: "old", value: 15, fixCost: 5, fixSuccess: 0.9 },
+            { name: "GPU", condition: "broken", value: 10, fixCost: 25, fixSuccess: 0.6 },
+            { name: "GPU", condition: "old", value: 20, fixCost: 15, fixSuccess: 0.8 },
+            { name: "CPU", condition: "refurbished", value: 40, fixCost: 0, fixSuccess: 1.0 },
+            { name: "GPU", condition: "refurbished", value: 50, fixCost: 0, fixSuccess: 1.0 },
+            { name: "RAM", condition: "broken", value: 1, fixCost: 5, fixSuccess: 0.8 },
+            { name: "RAM", condition: "old", value: 10, fixCost: 5, fixSuccess: 0.9 }
+        ];
+
+        // --- GAME LOGIC ---
+
+        function getNextId() {
+            gameState.nextId++;
+            return gameState.nextId;
+        }
+
+        // Creates a new PC listing
+        function createListing() {
+            const id = getNextId();
+            const name = PC_NAMES[Math.floor(Math.random() * PC_NAMES.length)];
+            const description = PC_DESCRIPTIONS[Math.floor(Math.random() * PC_DESCRIPTIONS.length)];
+            const conditionKeys = Object.keys(PC_CONDITIONS);
+            const condition = conditionKeys[Math.floor(Math.random() * conditionKeys.length)];
+            const valueMultiplier = PC_CONDITIONS[condition].valueMultiplier;
+            
+            // Base value
+            let baseValue = Math.floor(Math.random() * 200) + 50; // $50 - $250
+            let value = Math.floor(baseValue * valueMultiplier);
+            
+            // Price is 70-130% of its (broken) value
+            let price = Math.floor(value * (Math.random() * 0.6 + 0.7));
+            price = Math.max(10, price); // Minimum price $10
+
+            return { id, name, description, price, value: baseValue, condition };
+        }
+
+        // Populates the marketplace with new listings
+        function populateMarketplace() {
+            gameState.marketplaceListings = [];
+            for (let i = 0; i < 5; i++) {
+                gameState.marketplaceListings.push(createListing());
+            }
+            renderMarketplace();
+        }
+
+        // Creates a new part listing
+        function createPartListing() {
+            const id = getNextId();
+            let partType = PART_TYPES[Math.floor(Math.random() * PART_TYPES.length)];
+            
+            // Don't sell "refurbished" parts in the market
+            if (partType.condition === 'refurbished') {
+                partType = PART_TYPES[Math.floor(Math.random() * (PART_TYPES.length - 2))]; // Reroll
+            }
+
+            const value = partType.value;
+            // Price is 90-130% of value
+            const price = Math.max(1, Math.floor(value * (Math.random() * 0.4 + 0.9))); 
+            
+            return { 
+                id, 
+                name: partType.name, 
+                value, 
+                price, 
+                condition: partType.condition, 
+                fixCost: partType.fixCost, 
+                fixSuccess: partType.fixSuccess 
+            };
+        }
+
+        // Populates the parts market
+        function populatePartsMarket() {
+            gameState.partsMarketListings = [];
+            for (let i = 0; i < 8; i++) {
+                gameState.partsMarketListings.push(createPartListing());
+            }
+            renderPartsMarket();
+        }
+
+        // Contact a seller in the marketplace
+        function contactSeller(id) {
+            const listingIndex = gameState.marketplaceListings.findIndex(pc => pc.id === id);
+            if (listingIndex === -1) return; // Already sold
+
+            const listing = gameState.marketplaceListings[listingIndex];
+            
+            // 50/50 chance seller agrees
+            if (Math.random() < 0.5) {
+                showMessage("Seller said no. Too sketchy!");
+            } else {
+                showMessage("Seller said yes! Go to your car to pick it up.");
+                gameState.activePickup = listing;
+                // Remove from marketplace
+                gameState.marketplaceListings.splice(listingIndex, 1);
+                updateUI();
+            }
+        }
+
+        // Buy a part from the parts market
+        function buyPart(id) {
+            const partIndex = gameState.partsMarketListings.findIndex(p => p.id === id);
+            if (partIndex === -1) return;
+
+            const part = gameState.partsMarketListings[partIndex];
+
+            if (gameState.cash < part.price) {
+                showMessage(`You don't have $${part.price} for this!`);
+                return;
+            }
+
+            gameState.cash -= part.price;
+            // Add to parts inventory
+            const newPart = { ...part, id: getNextId() }; // Give it a new ID for inventory
+            gameState.partsInventory.push(newPart);
+            gameState.partsMarketListings.splice(partIndex, 1);
+
+            showMessage(`You bought a ${part.condition} ${part.name} for $${part.price}.`);
+            updateUI();
+        }
+
+        // Drive to pick up the PC
+        function driveToPickup() {
+            if (!gameState.activePickup) return;
+
+            const pc = gameState.activePickup;
+
+            if (gameState.cash < pc.price) {
+                showMessage(`You don't have $${pc.price}! You drove for nothing.`);
+                gameState.activePickup = null;
+                updateUI();
+                return;
+            }
+
+            // Show driving animation
+            drivingOverlay.style.display = 'block';
+
+            setTimeout(() => {
+                drivingOverlay.style.display = 'none';
+                gameState.cash -= pc.price;
+                gameState.inventory.push(pc);
+                gameState.activePickup = null;
+                showMessage(`You bought the '${pc.name}' for $${pc.price}!`);
+                updateUI();
+            }, 3000); // 3 second drive
+        }
+
+        // Fix a PC in the workshop
+        function fixPC(id) {
+            const pcIndex = gameState.inventory.findIndex(pc => pc.id === id);
+            if (pcIndex === -1) return;
+
+            const pc = gameState.inventory[pcIndex];
+            const fixConfig = PC_CONDITIONS[pc.condition];
+
+            if (!fixConfig) {
+                showMessage("It's already in good condition!");
+                return;
+            }
+            
+            if (gameState.cash < fixConfig.fixCost) {
+                showMessage(`You need $${fixConfig.fixCost} to try and fix this.`);
+                return;
+            }
+
+            gameState.cash -= fixConfig.fixCost;
+            let successMessage = `You paid $${fixConfig.fixCost}. `;
+
+            // Check for success
+            if (Math.random() < fixConfig.fixSuccess) {
+                pc.condition = "good";
+                pc.name = `Refurbished ${pc.name}`;
+                // Add a value boost for fixing!
+                pc.value = Math.floor(pc.value * 1.2); // 20% value boost
+                successMessage += `It's fixed! Its base value is now $${pc.value}.`;
+            } else {
+                successMessage += "You failed to fix it. ";
+                // Make failure less punishing
+                if (pc.condition === 'slow') {
+                    pc.condition = 'broken'; // It gets worse
+                    pc.value = Math.floor(pc.value * 0.9); // Slight value drop
+                    successMessage += "It's now 'broken' and worth less.";
+                } else {
+                    pc.value = Math.floor(pc.value * 0.8);
+                    successMessage += "It's still broken and its value dropped.";
+                }
+            }
+            
+            showMessage(successMessage);
+            updateUI();
+        }
+
+        // Sell a PC from the workshop
+        function sellPC(id) {
+            const pcIndex = gameState.inventory.findIndex(pc => pc.id === id);
+            if (pcIndex === -1) return;
+
+            const pc = gameState.inventory[pcIndex];
+            
+            // Sell price is based on condition
+            let sellPrice;
+            if (pc.condition === 'good') {
+                // Good PCs sell for 80-120% of their base value
+                sellPrice = Math.floor(pc.value * (Math.random() * 0.4 + 0.8));
+            } else {
+                // Unfixed PCs sell for less
+                const currentVal = pc.value * PC_CONDITIONS[pc.condition].valueMultiplier;
+                sellPrice = Math.floor(currentVal * (Math.random() * 0.3 + 0.7)); // 70-100% of broken value
+            }
+
+            gameState.inventory.splice(pcIndex, 1);
+            gameState.cash += sellPrice;
+
+            showMessage(`You sold the '${pc.name}' for $${sellPrice}!`);
+            updateUI();
+        }
+
+        // Salvage a PC for parts
+        function salvagePC(id) {
+            const pcIndex = gameState.inventory.findIndex(pc => pc.id === id);
+            if (pcIndex === -1) return;
+
+            const pc = gameState.inventory[pcIndex];
+            
+            // Remove PC from inventory
+            gameState.inventory.splice(pcIndex, 1);
+            
+            let salvagedParts = [];
+            let salvageCount = Math.floor(Math.random() * 3) + 1; // 1 to 3 parts
+
+            for(let i = 0; i < salvageCount; i++) {
+                // Get a random part
+                let partType = PART_TYPES[Math.floor(Math.random() * PART_TYPES.length)];
+                // Don't salvage "refurbished" parts
+                if (partType.condition === 'refurbished') {
+                     partType = PART_TYPES[Math.floor(Math.random() * 4)]; // Get a broken or old one
+                }
+
+                const newPart = { ...partType, id: getNextId() };
+                gameState.partsInventory.push(newPart);
+                salvagedParts.push(`${newPart.condition} ${newPart.name}`);
+            }
+
+            showMessage(`You salvaged the PC and got: ${salvagedParts.join(', ')}.`);
+            updateUI();
+        }
+
+        // Fix a part from the parts market
+        function fixPart(id) {
+            const partIndex = gameState.partsInventory.findIndex(p => p.id === id);
+            if (partIndex === -1) return;
+
+            const part = gameState.partsInventory[partIndex];
+
+            if (part.condition === 'refurbished') {
+                showMessage("This part is already refurbished!");
+                return;
+            }
+            
+            if (gameState.cash < part.fixCost) {
+                showMessage(`You need $${part.fixCost} to fix this.`);
+                return;
+            }
+
+            gameState.cash -= part.fixCost;
+            let successMessage = `You paid $${part.fixCost}. `;
+
+            if (Math.random() < part.fixSuccess) {
+                part.condition = 'refurbished';
+                // Find the matching "refurbished" part to get its new value
+                const refurbishedPart = PART_TYPES.find(p => p.name === part.name && p.condition === 'refurbished');
+                if (refurbishedPart) {
+                    part.value = refurbishedPart.value;
+                }
+                successMessage += `You fixed it! It's now a 'Refurbished ${part.name}' worth $${part.value}.`;
+            } else {
+                successMessage += "You failed to fix it. It's destroyed!";
+                // Remove from inventory on fail
+                gameState.partsInventory.splice(partIndex, 1);
+            }
+            
+            showMessage(successMessage);
+            updateUI();
+        }
+
+        // Sell a part from the parts market
+        function sellPart(id) {
+            const partIndex = gameState.partsInventory.findIndex(p => p.id === id);
+            if (partIndex === -1) return;
+
+            const part = gameState.partsInventory[partIndex];
+            
+            // Sell price is 80-120% of base value
+            const sellPrice = Math.floor(part.value * (Math.random() * 0.4 + 0.8));
+            
+            gameState.cash += sellPrice;
+            gameState.partsInventory.splice(partIndex, 1);
+
+            showMessage(`You sold your ${part.condition} ${part.name} for $${sellPrice}.`);
+            updateUI();
+        }
+
+        // --- SAVE/LOAD LOGIC ---
+
+        function saveGame() {
+            try {
+                const saveData = JSON.stringify(gameState);
+                const blob = new Blob([saveData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'pc_flipper_save.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showMessage("Game Saved!");
+            } catch (error) {
+                showMessage("Error saving game.");
+                console.error("Save error: ", error);
+            }
+        }
+
+        function loadGame(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const saveData = e.target.result;
+                    const loadedState = JSON.parse(saveData);
+                    // Basic validation
+                    if (loadedState && typeof loadedState.cash === 'number') {
+                        
+                        // --- Save File Migration ---
+                        // Add any new properties that might be missing from old saves
+                        if (typeof loadedState.inventory === 'undefined') {
+                            loadedState.inventory = [];
+                        }
+                        if (typeof loadedState.marketplaceListings === 'undefined') {
+                            loadedState.marketplaceListings = [];
+                        }
+                        if (typeof loadedState.partsInventory === 'undefined') {
+                            loadedState.partsInventory = [];
+                        }
+                        if (typeof loadedState.partsMarketListings === 'undefined') {
+                            loadedState.partsMarketListings = [];
+                        }
+                        if (typeof loadedState.nextId === 'undefined') {
+                            loadedState.nextId = 0;
+                        }
+
+                        gameState = loadedState;
+                        showMessage("Game Loaded!");
+                        updateUI();
+                        switchTab('marketplace'); // Go to a default tab
+                    } else {
+                        throw new Error("Invalid save file");
+                    }
+                } catch (error) {
+                    showMessage("Error loading save file.");
+                    console.error("Load error: ", error);
+                }
+            };
+            reader.readAsText(file);
+            // Reset file input
+            event.target.value = null;
+        }
+
+        // --- RENDERING ---
+
+        function updateUI() {
+            renderCash();
+            renderMarketplace();
+            renderCar();
+            renderInventory();
+            renderPartsMarket();
+        }
+
+        function renderCash() {
+            cashDisplay.textContent = `$${gameState.cash}`;
+            cashDisplay.classList.toggle('text-red-600', gameState.cash < 0);
+            cashDisplay.classList.toggle('text-green-600', gameState.cash >= 0);
+        }
+
+        function renderMarketplace() {
+            // Only render if the tab is active
+            if (listingsContainer.closest('.tab-content').classList.contains('active')) {
+                listingsContainer.innerHTML = "";
+                if (gameState.marketplaceListings.length === 0) {
+                    listingsContainer.innerHTML = `<p class="text-gray-500 text-center">No listings. Try refreshing!</p>`;
+                }
+                gameState.marketplaceListings.forEach(pc => {
+                    listingsContainer.appendChild(createListingElement(pc));
+                });
+            }
+        }
+
+        function createListingElement(pc) {
+            const el = document.createElement('div');
+            el.className = "bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm";
+            const conditionClass = pc.condition === 'broken' ? 'text-red-500' : (pc.condition === 'slow' ? 'text-yellow-500' : 'text-green-500');
+            
+            el.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold">${pc.name} <span class="text-sm font-medium ${conditionClass}">${pc.condition}</span></h3>
+                        <p class="text-sm text-gray-600">"${pc.description}"</p>
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-4">
+                        <div class="text-xl font-bold text-green-600">$${pc.price}</div>
+                        <button class="mt-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow" data-id="${pc.id}">
+                            Contact Seller
+                        </button>
+                    </div>
+                </div>
+            `;
+            el.querySelector('button').addEventListener('click', () => contactSeller(pc.id));
+            return el;
+        }
+
+        function renderCar() {
+            if (carContainer.closest('.tab-content').classList.contains('active')) {
+                if (gameState.activePickup) {
+                    carContainer.innerHTML = `
+                        <p class="text-lg">You are scheduled to pick up:</p>
+                        <div class="bg-white p-4 rounded-lg shadow my-4">
+                            <h3 class="text-xl font-semibold">${gameState.activePickup.name}</h3>
+                            <p class="text-gray-600">"${gameState.activePickup.description}"</p>
+                            <p class="text-lg font-bold mt-2">Price: $${gameState.activePickup.price}</p>
+                        </div>
+                        <button id="drive-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform duration-150 active:scale-95">
+                            Drive and Buy!
+                        </button>
+                    `;
+                    document.getElementById('drive-button').addEventListener('click', driveToPickup);
+                } else {
+                    carContainer.innerHTML = `<p class="text-gray-500">Your car is empty. Contact a seller to schedule a pickup.</p>`;
+                }
+            }
+        }
+
+        function renderInventory() {
+            if (inventoryContainer.closest('.tab-content').classList.contains('active')) {
+                inventoryContainer.innerHTML = "";
+                if (gameState.inventory.length === 0) {
+                    inventoryContainer.innerHTML = `<p class="text-gray-500 text-center">Your workshop is empty. Go buy some PCs!</p>`;
+                }
+                gameState.inventory.forEach(pc => {
+                    inventoryContainer.appendChild(createInventoryItemElement(pc));
+                });
+            }
+        }
+        
+        function createInventoryItemElement(pc) {
+            const el = document.createElement('div');
+            el.className = "bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm";
+            
+            let conditionClass = 'text-green-500';
+            let fixCost = 0;
+            let sellValue = 0;
+            
+            if (pc.condition !== 'good') {
+                conditionClass = pc.condition === 'broken' ? 'text-red-500' : 'text-yellow-500';
+                fixCost = PC_CONDITIONS[pc.condition].fixCost;
+                sellValue = Math.floor(pc.value * PC_CONDITIONS[pc.condition].valueMultiplier * 0.85); // Estimated unfixed sell value
+            } else {
+                sellValue = Math.floor(pc.value * 0.9); // Estimated good sell value
+            }
+
+            el.innerHTML = `
+                <h3 class="text-lg font-semibold">${pc.name} <span class="text-sm font-medium ${conditionClass}">${pc.condition}</span></h3>
+                <p class="text-sm text-gray-600">Base Value: $${pc.value}</p>
+                <div class="flex gap-2 mt-3">
+                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow transition-transform duration-150 active:scale-95" data-id="${pc.id}" ${pc.condition === 'good' ? 'disabled' : ''}>
+                        Fix ($${fixCost})
+                    </button>
+                    <button class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow transition-transform duration-150 active:scale-95" data-id="${pc.id}">
+                        Sell (for ~$${sellValue})
+                    </button>
+                    <button class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow transition-transform duration-150 active:scale-95" data-id="${pc.id}">
+                        Salvage
+                    </button>
+                </div>
+            `;
+
+            const fixButton = el.querySelector('.bg-yellow-500');
+            const sellButton = el.querySelector('.bg-green-500');
+            const salvageButton = el.querySelector('.bg-red-500');
+            
+            if (fixButton) {
+                fixButton.addEventListener('click', () => fixPC(pc.id));
+                if (pc.condition === 'good') {
+                    fixButton.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            }
+            if (sellButton) {
+                sellButton.addEventListener('click', () => sellPC(pc.id));
+            }
+            if (salvageButton) {
+                salvageButton.addEventListener('click', () => salvagePC(pc.id));
+            }
+            
+            return el;
+        }
+
+        function renderPartsMarket() {
+            if (partsListingsContainer.closest('.tab-content').classList.contains('active')) {
+                // Render Parts For Sale
+                partsListingsContainer.innerHTML = "";
+                if (gameState.partsMarketListings.length === 0) {
+                    partsListingsContainer.innerHTML = `<p class="text-gray-500 text-center">No parts listings. Try refreshing!</p>`;
+                }
+                gameState.partsMarketListings.forEach(part => {
+                    const el = document.createElement('div');
+                    el.className = "flex justify-between items-center bg-gray-50 p-3 rounded-lg border";
+                    const conditionClass = part.condition === 'broken' ? 'text-red-500' : 'text-yellow-500';
+                    el.innerHTML = `
+                        <div>
+                            <h4 class="font-semibold">${part.name} <span class="text-sm ${conditionClass}">${part.condition}</span></h4>
+                            <p class="text-sm text-gray-500">Value: $${part.value}</p>
+                        </div>
+                        <button class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow" data-id="${part.id}">
+                            Buy ($${part.price})
+                        </button>
+                    `;
+                    el.querySelector('button').addEventListener('click', () => buyPart(part.id));
+                    partsListingsContainer.appendChild(el);
+                });
+
+                // Render My Parts (Inventory)
+                partsInventoryContainer.innerHTML = "";
+                if (gameState.partsInventory.length === 0) {
+                    partsInventoryContainer.innerHTML = `<p class="text-gray-500 text-center">You don't own any parts. Salvage PCs!</p>`;
+                }
+                gameState.partsInventory.forEach(part => {
+                    const el = document.createElement('div');
+                    el.className = "flex justify-between items-center bg-gray-50 p-3 rounded-lg border";
+                    
+                    let conditionClass = 'text-green-500';
+                    if (part.condition !== 'refurbished') {
+                        conditionClass = part.condition === 'broken' ? 'text-red-500' : 'text-yellow-500';
+                    }
+                    const sellPrice = Math.floor(part.value * 0.9);
+
+                    el.innerHTML = `
+                        <div>
+                            <h4 class="font-semibold">${part.name} <span class="text-sm ${conditionClass}">${part.condition}</span></h4>
+                            <p class="text-sm text-gray-500">Value: $${part.value}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow" data-id="${part.id}" ${part.condition === 'refurbished' ? 'disabled' : ''}>
+                                Fix ($${part.fixCost})
+                            </button>
+                            <button class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 text-sm rounded-lg shadow" data-id="${part.id}">
+                                Sell (~$${sellPrice})
+                            </button>
+                        </div>
+                    `;
+                    const fixBtn = el.querySelector('.bg-yellow-500');
+                    fixBtn.addEventListener('click', () => fixPart(part.id));
+                    if (part.condition === 'refurbished') {
+                        fixBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                    el.querySelector('.bg-green-500').addEventListener('click', () => sellPart(part.id));
+                    partsInventoryContainer.appendChild(el);
+                });
+            }
+        }
+
+        // --- TABS & MESSAGES ---
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(button => {
+                if (button.dataset.tab === tabName) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                if (content.id === `${tabName}-content`) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+
+            // Re-render content for the active tab
+            if (tabName === 'marketplace') renderMarketplace();
+            if (tabName === 'car') renderCar();
+            if (tabName === 'workshop') renderInventory();
+            if (tabName === 'parts-market') renderPartsMarket();
+        }
+        
+        let messageTimer;
+        function showMessage(message) {
+            messageText.textContent = message;
+            messageToast.classList.add('opacity-100');
+
+            clearTimeout(messageTimer);
+            messageTimer = setTimeout(() => {
+                messageToast.classList.remove('opacity-100');
+            }, 3000); // Hide after 3 seconds
+        }
+
+        // --- EVENT LISTENERS ---
+
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                switchTab(button.dataset.tab);
+            });
+        });
+
+        refreshListingsButton.addEventListener('click', () => {
+            if (gameState.cash < 10) {
+                showMessage("It costs $10 to refresh!");
+                return;
+            }
+            gameState.cash -= 10;
+            populateMarketplace();
+            showMessage("Refreshed marketplace listings!");
+            renderCash(); // Update cash display
+        });
+
+        refreshPartsButton.addEventListener('click', () => {
+            populatePartsMarket();
+            showMessage("Refreshed parts listings!");
+        });
+
+        saveButton.addEventListener('click', saveGame);
+        loadInput.addEventListener('change', loadGame);
+
+        // --- INITIALIZE ---
+        function init() {
+            populateMarketplace();
+            populatePartsMarket();
+            switchTab('marketplace'); // Start on marketplace
+            renderCash();
+        }
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
